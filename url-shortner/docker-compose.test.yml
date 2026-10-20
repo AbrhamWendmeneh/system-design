@@ -1,0 +1,39 @@
+services:
+  tests:
+    build:
+      context: ./app
+      dockerfile: Dockerfile.test
+    environment:
+      REDIS_HOST: test-redis
+      REDIS_PORT: 6379
+      POSTGRES_HOST: test-db
+      POSTGRES_DB: urlshortener_test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    depends_on:
+      test-redis:
+        condition: service_healthy
+      test-db:
+        condition: service_healthy
+
+  test-redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 2s
+      retries: 10
+
+  test-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: urlshortener_test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - ./app/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d urlshortener_test"]
+      interval: 2s
+      timeout: 2s
+      retries: 10
